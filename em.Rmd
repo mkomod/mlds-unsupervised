@@ -13,19 +13,19 @@ library(mvtnorm)
 
 ## Mixture Models
 
-Mixture models are made up of a linear combination of other distributions. We'll see later on that mixture models are a useful probabilistic tool that are able to capture detailed structure in our data. 
+Mixture models are a useful probabilistic tool that are able to capture detailed structure in our data. Simply put, mixture models are distributions that are made up of a linear combination of other distributions. 
 
-In the meantime, consider let's consider the distribution,
+To begin with, let's consider the distribution,
 $$
-Z = 0.3 N(\mu_1, \Sigma_1) + 0.2N(\mu_2, \Sigma_2) + 0.5N(\mu_3, \Sigma_3)
+X = 0.3 N(\mu_1, \Sigma_1) + 0.2N(\mu_2, \Sigma_2) + 0.5N(\mu_3, \Sigma_3)
 $$
-where $\mu_k \in \mathbb{R}^d$ is the mean vector and $\Sigma_k \in \mathbb{R}^{d \times d}$ is the covariance matrix for $k=1,2,3$. We notice that $Z$ comprises of a mixture of Gaussians, where each Gaussian, referred to as a **component** of the mixture, has its own mean $\mu_k$ and covariance $\Sigma_k$. 
+where $\mu_k \in \mathbb{R}^d$ is the mean vector and $\Sigma_k \in \mathbb{R}^{d \times d}$ is the covariance matrix for $k=1,2,3$. We notice that $X$ comprises of a mixture of Gaussians, where each Gaussian, referred to as a **component** of the mixture, has its own mean $\mu_k$ and covariance $\Sigma_k$. This distribution is a specific case of a mixture model.
 
-Such distributions are commonly referred to as **Gaussian mixture models**, whose density is written as,
+Such distributions are commonly referred to as **Gaussian mixture models**, whose density is more generally written as,
 $$
 p(x | \theta) = \sum_{k=1}^K \pi_k \phi(x; \mu_k, \Sigma_k)
 $$
-where $K \in \mathbb{N}$ is the number of components, $\pi_k \in [0, 1]$ are the **mixing coefficients** such that $\sum_{k=1}^K = 1$, and $\phi(x; \mu_k, \Sigma_k)$ is the pdf of multivariate Normal distribution with mean $\mu_k$ and covariance $\Sigma_k$. For notational shorthand we typically write the model parameters as $\theta = \{ \pi_k, \mu_k, \Sigma_k \}_{k=1}^K$.
+where $K \in \mathbb{N}$ is the number of components, $\pi_k \in [0, 1]$ are the **mixing coefficients** such that $\sum_{k=1}^K = 1$, and $\phi(x; \mu_k, \Sigma_k)$ is the pdf of multivariate Normal distribution with mean $\mu_k$ and covariance $\Sigma_k$. For notational shorthand we typically write the model parameters as $\theta = \{ ( \pi_k, \mu_k, \Sigma_k ) \}_{k=1}^K$.
 
 **Aim:** our aim in this tutorial is to construct an EM algorithm for the Gaussian mixture model.
 
@@ -35,7 +35,7 @@ where $K \in \mathbb{N}$ is the number of components, $\pi_k \in [0, 1]$ are the
 
 The EM algorithm has been covered during the lectures, however, as we'll be referring to the algorithm throughout the tutorial it is given below for reference.
 
-Recall, the EM algorithm is used to find maximum likelihood solutions for models with latent variables. 
+Recall, the EM algorithm is used to find maximum likelihood solutions for models with latent variables. It is outlined as follows:
 
  1. Initialize $\theta$, the model parameters
  2. E-step: Evaluate $p(Z | X, \theta^{\text{old}})$
@@ -52,9 +52,17 @@ Recall, the EM algorithm is used to find maximum likelihood solutions for models
 ---
 
 
+Our first step is to generate some test data where we know the true parameter values. We are going to use the test data to develop our algorithm. After fitting successfully to the test data, we can then branch out and explore other datasets.
+
 ### Exercise {.tabset}
 
-Implement a function to sample from a Gaussian mixture model. A description of the function arguments are given below.
+Implement a function to sample from a Gaussian mixture model. A description of the function arguments are given below. Recall, we are aiming to sample from $X$ assuming the parameters are known, $X$ will take a general form of:
+
+$$
+X = \sum_{k=1}^K \pi_k N(\mu_k, \Sigma_k)
+$$
+
+**hint**: use the `mvtnorm` package to sample from a multivariate Normal, specifically you'll need to use the `rmvnorm` function. 
 
 #### Template
 
@@ -139,10 +147,10 @@ X <- sample.gmm(100, p, mu, Sig)
 Let's take a look at the samples form the second test.
 
 ```{r, fig.align="center", fig.height=6, fig.width=6}
+set.seed(1)	# set the seed so we can replicate our results
 X <- sample.gmm(100, p, mu, Sig)
 
-plot(X, pch=20, xlim=c(-8, 8), ylim=c(-8, 8), 
-     xlab=expression(X[1]), ylab=expression(X[2]))
+plot(X, pch=20, xlim=c(-8, 8), ylim=c(-8, 8), xlab=expression(X[1]), ylab=expression(X[2]))
 ```
 
 We notice that there are three distinct groups, with each group containing a different proportion of samples.
@@ -156,7 +164,7 @@ We now turn to implementing the EM algorithm for Gaussian mixture models. At thi
 
 This isn't immediately obvious, so to highlight that there are in fact latent variables, let's consider the following question: how would you alter the function `sample.gmm` so that we know which group the sample came from?
 
-We see that, to know which group each sample came from we would have to return `k` as well. This is because `k` tells us which component to draw the sample from. As the group label is unknown to us, it in turn, is an unknown latent variable which we want to recover.
+We see that, to know which group each sample came from we would have to return `k` as well. This is because `k` tells us which component to draw the sample from. As the group label is unknown to us, it is an unknown latent variable.
 
 ---
 
@@ -191,9 +199,9 @@ $$
 
 Write down the mass function of $p(z | x, \theta)$ up to a normalizing constant,
 
-#### Template
-
 **hint:** use Bayes theorem
+
+#### Template
 
 $$
 p(z | x, \theta)  \propto
@@ -275,7 +283,9 @@ g(X[1, ], p, mu, Sig)
 
 --- 
 
-Finally, we must derive the joint log-likelihood $p(x, z | \theta)$. In a similar fashion as before, we have,
+### Joint log-likelihood
+
+Next, we must derive the joint log-likelihood $p(x, z | \theta)$. In a similar fashion as before, we have,
 
 $$
 p(z, x | \theta) = p(x | z, \theta) p (z | \theta) 
@@ -296,7 +306,9 @@ $$
 
 ---
 
-We are now able to write down a full expression for $Q(\theta, \theta^{\text{old}})$. The last task is to solve the optimization problem given by
+### Optimizing the parameters
+
+We are now able to write down an expression for $Q(\theta, \theta^{\text{old}})$. The last task is to solve the optimization problem given by
 $$
 \theta^{\text{new}} = \underset{\theta}{ \arg \! \max}\  \sum_{Z}  p(Z | X, \theta^{\text{old}}) \log p(X, Z | \theta)
 $$
@@ -312,6 +324,7 @@ f =&\ \sum_{Z}  p(Z | X, \theta^{\text{old}}) \log p(X, Z | \theta) \\
 $$
 Finding the optimum of $f$ with respect to $\mu_k$ now involves differentiating with respect to $\mu_k$, setting the expression to zero and rearranging. Formally, the derivative of $f$ with respect to $\mu_k$ is,
 
+---
 
 ### Exercise {.tabset}
 
@@ -354,11 +367,15 @@ $$
 
 ---
 
-Great, now we can finish up our implementation. To simplify the computation, we are going to pre-compute $\gamma(z_{ik})$ for each $i$ and $k$ before updating the model parameters. For this we use the function `g` which we wrote earlier, passing each row of $X$ to `g` and returning the matrix `G`,
+### Implementing the update equations
+
+Great, now we can finish up our implementation. To simplify the computation, we are going to pre-compute $\gamma(z_{ik})$ for each $i$ and $k$ before updating the model parameters. This is equivalent to computing $p(Z | X, \theta)$, which is required in the second step of the EM algorithm.
+
+For this we use the function `g` which we wrote earlier, passing each row of $X$ to `g` and returning the matrix `G`,
 
 ```{r}
 G <- t(apply(X, 1, function(x) g(x, p, mu, Sig)))
-G <- t(apply(G, 1, function(g) g / sum(g)))
+G <- t(apply(G, 1, function(g) g / sum(g)))	# normalize
 ```
 
 
@@ -416,6 +433,10 @@ update_mu <- function(mu, X, G)
 ### Exercise {.tabset}
 
 Write a function to update the array of covariance matrices `Sig`, this will involve updating each $\Sigma_k$.
+
+**Note**: this is a bit more complicated than updating `mu`.
+
+**Hint**: create a temporary covariance matrix `S` and use it when computing the sum over the data.
 
 #### Template
 
@@ -583,3 +604,71 @@ filled.contour(xs, xs, z, plot.title={points(X, pch=20)},
 	      xlab=expression(X[1]), ylab=expression(X[2]))
 ```
 
+---
+
+## Application to real data
+
+We are going to be analysing the `faithful` dataset. To learn a bit more about the dataset you can read the documentation page `?faithful`. But to summarize, the dataset describes the waiting times between geyser eruptions and the duration of eruptions. 
+
+```{r}
+# load in the dataset
+data(faithful)
+```
+
+Let's take a look at the eruption durations.
+
+```{r, fig.height=6, fig.width=9, fig.align="center"}
+hist(faithful$eruptions, breaks=20, main="Hist of Faithful", xlab="Eruption duration")
+```
+
+We notice that there are two main clusters. We are not going to apply the GMM algorithm we wrote to learn about the clusters.
+
+---
+
+We begin be initializing the parameters. We need to ensure they are in the same format our algorithm accepts.
+
+```{r}
+mu <- matrix(rnorm(2), nrow=2)
+Sig <- array(c(1, 1), dim=c(1, 1, 2))
+p <- c(0.5, 0.5)
+X <- matrix(faithful$eruptions, ncol=1)
+```
+
+Now we run the algorithm.
+
+```{r}
+# run the EM algorithm
+for (iter in 1:100) 
+{
+    # save the old values of mu, Sig, p
+    mu.old <- mu
+    Sig.old <- Sig
+    p.old <- p
+
+    # compute gamma(z_{ik})
+    G <- t(apply(X, 1, function(x) g(x, p, mu, Sig)))
+    G <- t(apply(G, 1, function(g) g / sum(g)))
+
+    # update mu, Sig, p
+    mu <- update_mu(mu, X, G)
+    Sig <- update_Sig(Sig, X, G, mu)
+    p <- update_p(G)
+    
+    # check for convergence
+    if (sum(abs(mu.old - mu)) < 1e-3 &&
+        sum(abs(Sig.old - Sig)) < 1e-3 &&
+        sum(abs(p.old - p)) < 1e-3)
+        break
+}
+```
+
+And Finally, let's visualize the density under the estimated model.
+
+```{r, fig.width=9, fig.height=6, fig.align="center"}
+# compute the density
+xs <- seq(0, 8, length.out=100)
+zs <- sapply(xs, function(x) compute.density(x, mu, Sig, p))
+
+plot(xs, zs, type="l", ylab="density")
+rug(X)
+```

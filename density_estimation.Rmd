@@ -1,0 +1,357 @@
+---
+title: "Tutorial: density estimation"
+output:
+  html_document:
+    css: ./style.css
+---
+
+Kernel density estimators (KDEs) are used to obtain an estimate for the density function. Unlike parametric methods, which assume the density has a known distribution type, kernel density estimators "let the data speak for themselves" and are therefore able to capture richer structure within our data.
+
+**Aim:** the aim of this tutorial is to implemented basic kernel density estimators and explore their properties.
+
+---
+
+## Problem formulation
+
+First off, we need to formulate the problem, define our notation and outline what we are trying to estimate.
+
+We are going to assume we have a sample of data $X_1, \dots, X_n$ where $X_i \overset{iid}{\sim} f_X$ from some unknown density function $f_X$. Our goal is to use the sample to construct an estimate for the density function, which we are going to denote as $\widehat{f}_X$.
+
+## The Histogram
+
+One of the simplest (and most widely used) forms of density estimators is the histogram. Under the histogram an origin $x_0$ and bandwidth $h$ are used to construct bins
+$$
+B_j = [ x_0 + (j-1)h, x_0 + jh), \quad j = \dots, -2, -1, 0, 1, 2, \dots
+$$
+Then using the bins, the density estimator,
+$$
+\widehat{f}_X(x) = \frac{1}{nh} \sum_{i=1}^n \sum_{j} \mathbb{I}(X_i \in B_j) \mathbb{I}(x \in B_j).
+$$
+
+Put more simply, $\widehat{f}_X(x) = \frac{1}{nh} \#(X\text{s in the same bin as } x)$
+
+### Exercise {.tabset}
+
+We are going to implement a simple version of the histogram (at some point will start using built-in R functions), but in the meantime we are going to make our own to understand the process behind density estimation
+
+Implement the histogram density estimator. For simplicity, rather than have consider the density at a specific value of $x$, i.e. $f_X(x)$, we are going to count the number of samples within each bin and return that vector. 
+
+
+#### Template
+
+```{r}
+f.hist <- function(X, h, x0, n_bins) 
+{
+    # X	      a n dimensional vector of observed data
+    # h       bandwidth
+    # x0      origin
+    # n_bins  number of bins
+    #
+    # returns a vector of size n_bins where each element is 
+    # the number of observations within each bin
+
+    counts <- numeric(n_bins)	# create a vector of length bins
+
+    for (i in 1:n_bins) {
+        # count the number of observtions (Xs) in each bin
+        # ...
+    }
+
+    return(counts)
+}
+```
+
+
+something
+
+#### Solution
+
+```{r}
+f.hist <- function(X, h, x0, n_bins) 
+{
+    # X	      a n dimensional vector of observed data
+    # h       bandwidth
+    # x0      origin
+    # n_bins  number of bins
+    #
+    # returns a vector of size n_bins where each element is 
+    # the number of observations within each bin
+
+    counts <- numeric(n_bins)	# create a vector of length bins
+
+    for (i in 1:n_bins) {
+        # count the number of observtions (Xs) in each bin
+        counts[i] <- sum(((x0 + (i -1)*h) <= X) & (X < (x0 + i*h)))
+    }
+
+    return(counts)
+}
+```
+
+#### Testing
+
+```{r}
+set.seed(1)
+X <- rnorm(50)
+
+f.hist(X, 0.5, -5, 20)
+```
+
+
+### {-}
+
+
+Granted our implementation is quite a crude. However, we can compare it to the built-in implementation. 
+
+
+```{r, fig.height=4.5, fig.width=9, fig.align="center"}
+xs <- seq(-5, by=0.5, length.out=20)
+
+par(mfrow=c(1,2))
+plot(xs, f.hist(X, 0.5, -5, 20), type="s", bty="n",
+    main="Our histogram of X", ylab="Frequency", xlab="X")
+hist(X, xlim=c(-5, 5))
+```
+
+Not too bad, a bit ugly, but functional!
+
+---
+
+### Exercise
+
+Play around with the bin width and number of bins.
+
+ * What happens when the bandwidth is small and the number of bins large?
+ * What happens when the bandwidth is large and the number of bins small?
+
+---
+
+## Kernel density estimators
+
+Building on the ideas of the histogram, we are going to introduce a richer class of density estimators with more properties. Hopefully, some of these properties are able to capture our priori belief in what the density might looks like. For instance we may expect the density to be a smooth function, in which case, we would use a **kernel** that is smooth.
+
+Let's begin by defining a kernel density estimator, we let, 
+$$
+\widehat{f}_X(x) = \frac{1}{nh} \sum_{i=1}^n K \left( \frac{x - X_i}{h} \right)
+$$
+where $K : \mathbb{R} \rightarrow \mathbb{R}$. In order for $\widehat{f}_X$ to be a valid density we must ensure $\int_{\mathbb{R}} K(t) dt = 1$. 
+
+Typically, we would also want a kernel to satisfy:
+
+ * symmetry $K(t) = K(-t)$
+ * non-negativity $K(t) \geq 0, \quad \forall t$
+
+----
+
+### Types of Kernels
+
+There are many kernel functions that one can use. Some of the most common are:
+
+ * Epanechnickov $\frac{3}{4 \sqrt{5}} \left( 1 - \frac{x^2}{5} \right), \quad |x| \leq \sqrt{5}$
+ * Biweight $\frac{15}{16} \left( 1 - x^2 \right)^2, \quad |x| \leq 1$
+ * Triangular $1 - |x|, \quad |x| \leq 1$
+ * Normal $\frac{1}{\sqrt{2\pi}} \exp( -x^2 / 2)$
+
+### Exercise {.tabset}
+
+Implement the Epanechnickov, Biweight and triangular kernels. 
+
+**Note** there is no need to implement the Normal kernel as we can use the `dnorm` function.
+
+#### Template
+
+```{r}
+epan <- function(x) {
+    # x	  numeric
+    #
+    # returns numeric
+    
+    # ...
+}
+
+
+biweight <- function(x) {
+    # x	  numeric
+    #
+    # returns numeric
+    
+    # ...
+}
+
+
+tri <- function(x) {
+    # x	  numeric
+    #
+    # returns numeric
+    
+    # ...
+}
+```
+
+#### Solution
+
+```{r}
+epan <- function(x) {
+    # x	  numeric
+    #
+    # returns numeric
+    res <- ifelse(abs(x) <= sqrt(5), 3 / (4 * sqrt(5)) * (1 - x^2/5), 0)
+
+    return(res)
+}
+
+
+biweight <- function(x) {
+    # x	  numeric
+    #
+    # returns numeric
+    res <- ifelse(abs(x) <= 1, 15 / 16 * (1 - x^2)^2, 0)
+
+    return(res)
+}
+
+
+tri <- function(x) {
+    # x	  numeric
+    #
+    # returns numeric
+    res <- ifelse(abs(x) <= 1, 1 - abs(x), 0)
+
+    return(res)
+}
+```
+
+#### Testing
+
+```{r}
+x <- (-3:3)/2
+
+epan(x)
+biweight(x)
+tri(x)
+
+```
+
+### {-}
+
+Let's take a look at what each of these kernels looks like.
+
+```{r, fig.width=9, fig.height=6, fig.align="center"}
+curve(epan, -5, 5, ylim=c(0, 1.1), lwd=3, col=2, ylab="K(x)", xlab="x")
+curve(biweight, -5, 5, lwd=3, col=3, add=TRUE)
+curve(tri, -5, 5, lwd=3, col=4, lty=1, add=TRUE)
+legend("topright", legend=c("Epanechnickov", "Biweight", "Triangular"),
+       lwd=3, col=c(2,3,4))
+```
+
+---
+
+### Exercise {.tabset}
+
+Implement a general function for kernel density estimation.
+
+#### Template
+
+```{r}
+kde <- function(x, K, h, X) {
+    # x	   the point at which we want to evaluate the density
+    # K    kernel function
+    # h    bandwidth
+    # X    n dimensional vector of observations
+    #
+    # returns the kernel density estimate at x, i.e. f(x)
+
+    # ...
+}
+```
+
+#### Solution
+
+```{r}
+kde <- function(x, K, h, X) {
+    # x	   the point at which we want to evaluate the density
+    # K    kernel function
+    # h    bandwidth
+    # X    n dimensional vector of observations
+    #
+    # returns the kernel density estimate at x, i.e. f(x)
+
+    res <- 1/h * mean(K((x - X) / h))
+    
+    return(res)
+}
+```
+
+#### Testing
+
+```{r}
+kde(0.5, epan, 0.2, X)
+```
+
+### {-}
+
+---
+
+
+## Application to real data
+
+Great! We've now implemented our own kernel density estimator. We're now going to experiment a bit with different bandwidths and different kernels. 
+
+As part of our experimentation we're going to be looking at the `faithful` dataset. First thing's first, let's load in the data
+
+```{r}
+data(faithful)
+```
+
+To learn more about the dataset enter `?faithful`. To summarize, the dataset describes the waiting times between geyser eruptions and the duration of eruptions. 
+
+We're specifically going to be looking at the eruptions. So we let
+
+```{r}
+X <- faithful$eruptions
+```
+
+Let's take a look at the density estimate of eruptions using the Epanechnickov kernel
+
+```{r, fig.width=9, fig.height=6, fig.align="center"}
+xs <- seq(1, 6, length.out=100)
+den <- sapply(xs, function(x) kde(x, epan, 0.2, X))
+
+plot(xs, den, main="Faithful Eruptions data: Epanechnickov Kernel",
+     xlab="x", ylab="density", type="l", lwd=3)
+```
+
+---
+
+### Exercise
+
+Using the eruptions data, `X`, Experiment with the different kernels and different bandwidth values.
+
+ * What happens when the bandwidth is small?
+ * What happens when the bandwidth is large?
+
+---
+
+### Exercise
+
+Experiment with the built-in `density` function.
+
+ * How does the density estimate of the built-in function compare to our own function `kde`?
+ * How is the bandwidth set? **hint**: check the documentation `?density`
+
+---
+
+### Exercise
+
+Come up with your own kernel, you can use any function that integrates to 1. 
+
+ * How does your kernel compare to say the others?
+
+**hint**: consider other density functions e.g. Laplace density.
+
+
+<br>
+<br>
+
+---
+
