@@ -318,8 +318,8 @@ Given it is possible to derive an analytic solution in this case, we pursue the 
 $$
 \begin{align}
 f =&\ \sum_{Z}  p(Z | X, \theta^{\text{old}}) \log p(X, Z | \theta) \\
-=&\ \sum_{i=1}^n \sum_{k=1}^K \gamma(z_{ik}) \log \left( \pi^{z_{ik}}_k \phi(x_i; \mu_k, \Sigma_k)^{z_{ik}} \right) \\
-=&\ \sum_{i=1}^n \sum_{k=1}^K \gamma(z_{ik}) \log \left( \pi^{z_{ik}}_k \right) + \gamma(z_{ik}) \log \left( \phi(x_i; \mu_k, \Sigma_k)^{z_{ik}} \right)
+=&\ \sum_{i=1}^n \sum_{k=1}^K \gamma(z_{ik}) \log \left( \pi_k \phi(x_i; \mu_k, \Sigma_k) \right) \\
+=&\ \sum_{i=1}^n \sum_{k=1}^K \gamma(z_{ik}) \log \left( \pi_k \right) + \gamma(z_{ik}) \log \left( \phi(x_i; \mu_k, \Sigma_k) \right)
 \end{align}
 $$
 Finding the optimum of $f$ with respect to $\mu_k$ now involves differentiating with respect to $\mu_k$, setting the expression to zero and rearranging. Formally, the derivative of $f$ with respect to $\mu_k$ is,
